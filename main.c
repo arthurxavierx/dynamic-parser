@@ -4,17 +4,17 @@
 #include "utils.h"
 #include "lexer.h"
 
-
-int main() {
+int main()
+{
   TOKEN* t;
 
-  while(!feof(stdin)) {
-    for(t = get_tokens(stdin); t != NULL; t = t->right) {
-      __info("|%s| ", t->token);
-      free(t->token);
-      free(t);
+  while(!feof(stdin))
+  {
+    for(t = tokenize(stdin); t != NULL; t = t->right) {
+      printf("\"%s\":%x ", t->token, t->type);
+      token_destroy(t);
     }
-    __info("\n");
+    printf("\n");
   }
 
   return 0;

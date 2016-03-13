@@ -24,7 +24,21 @@
 #define TOKEN_PARENTHESIS  0x001002u  // 0000 0000 0001 0000 0000 0010
 
 #define TOKEN_BEGIN        0x000010u  // 0000 0000 0000 0000 0001 0000
-#define TOKEN_END          0x000010u  // 0000 0000 0000 0000 0010 0000
+#define TOKEN_END          0x000020u  // 0000 0000 0000 0000 0010 0000
+
+/**
+ * Check if a token type partially matches another token type.
+ * @param t1 token type to be matched
+ * @param t2 token type to match against
+ * @return true if t1 is the same type of t2 or if it's a subtype of t2
+ */
+int istype(TOKEN_TYPE t1, TOKEN_TYPE t2);
+/**
+ * Check if a string is a number-like string.
+ * @param s string to check
+ * @return true if s is a number-like string, otherwise false
+ */
+int isnumberstr(const char* s);
 
 /**
  * TOKEN struct
@@ -44,7 +58,7 @@ typedef struct LEXICAL_RULE {
 
 static const LEXICAL_RULE DICTIONARY[] = {
   { "\n", NULL, TOKEN_NEWLINE },
-  { NULL, isnumber_, TOKEN_NUMBER },
+  { NULL, isnumberstr, TOKEN_NUMBER },
   { "+", NULL, TOKEN_OPERATOR_ADD },
   { "-", NULL, TOKEN_OPERATOR_SUB },
   { "(", NULL, TOKEN_PARENTHESIS | TOKEN_BEGIN },
@@ -52,11 +66,23 @@ static const LEXICAL_RULE DICTIONARY[] = {
   { NULL, NULL, TOKEN_NULL }
 };
 
+/**
+ * Create a default TOKEN structure out of a token string.
+ * @param s pointer to the token string
+ * @return The created TOKEN structure
+ */
+TOKEN* token_create(char* s);
+/**
+ * Destroy a TOKEN structure and remove its references from its neighbors.
+ * @param t pointer to the token
+ */
+void   token_destroy(TOKEN* t);
 
-int istype(TOKEN_TYPE t1, TOKEN_TYPE t2);
-int isnumber_(const char* s);
-
-TOKEN* make_token(char* s);
-TOKEN* get_tokens(FILE* in);
+/**
+ * Generate a token linked list out of an input stream of characters.
+ * @param in input stream of characters
+ * @return The first token of the generated token list
+ */
+TOKEN* tokenize(FILE* in);
 
 #endif

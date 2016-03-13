@@ -1,16 +1,32 @@
-#define NDEBUG
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
 #include "utils.h"
 #include "lexer.h"
 
+/**
+ * Find a specific lexical rule in the dictionary which matches the specified token.
+ * @param t pointer to the start of the token string
+ * @param s pointer to the end (current character) of the token string
+ * @return Index of the matched lexical rule
+ */
+unsigned char match_rule(const char*, const char*);
+
 int istype(unsigned int t1, unsigned int t2)
 {
   return !((t1 & t2) == t1);
 }
 
-TOKEN* make_token(char* s)
+int isnumberstr(const char* s)
+{
+  if(s == NULL || *s == '\0' || isspace(*s))
+    return 0;
+  char* p;
+  strtod(s, &p);
+  return *p == '\0';
+}
+
+TOKEN* token_create(char* s)
 {
   TOKEN* t = (TOKEN*)malloc(sizeof(TOKEN));
   t->token = s;
@@ -21,22 +37,26 @@ TOKEN* make_token(char* s)
   return t;
 }
 
-
-TOKEN* get_tokens(FILE* in)
+void token_destroy(TOKEN* t)
 {
-  unsigned char i;
-  /** current character */
-  char c;
-  /** pointer to the start of the whole sequence read from in */
-  char *t;
-  /** pointer to the current character in the token string */
-  char *s;
-  /** current token type */
-  TOKEN_TYPE type;
+  t->left != NULL ? t->left->right = NULL : NULL;
+  t->right != NULL ? t->right->left = NULL : NULL;
+  free(t->token);
+  free(t);
+}
 
-  TOKEN *first_token = NULL, *token = NULL, *last_token = NULL;
+TOKEN* tokenize(FILE* in)
+{
+  unsigned char r = 0; /**< index of current dictionary rule */
 
-  // initialize token string
+  unsigned char c;  /**< current character */
+  char *t; /**< pointer to the start of the whole sequence read from in */
+  char *s; /**< pointer to the current character in the token string */
+
+  TOKEN_TYPE type; /**< current token type */
+  TOKEN *token = NULL, *first_token = NULL, *last_token = NULL;
+
+  // initialize token string. { max length of token = 255 }
   t = (char*)malloc(255);
   memset(t, 0, 255);
 
@@ -52,20 +72,20 @@ TOKEN* get_tokens(FILE* in)
     // sets the current character in the token string
     *s = c;
 
-    // (type != NULL) ==> check if the character read has the same token type
+    // (type != NULL)? ==> check if the character read has the same token type
     if(type != TOKEN_NULL) {
-
-      // (token type of c != type) ==> instantiate read token and starting reading a new one
-      if(!(DICTIONARY[i].string != NULL && c == DICTIONARY[i].string[s - t])
-         && !(DICTIONARY[i].function != NULL && DICTIONARY[i].function(t) != 0)) {
-
+      // (token type of c != type)? ==> instantiate read token and starting reading a new one
+      if(!(DICTIONARY[r].string != NULL && c == DICTIONARY[r].string[s - t])
+         && !(DICTIONARY[r].function != NULL && DICTIONARY[r].function(t) != 0))
+      {
         // terminates current token string
         *s = 0;
         __info("'%s' : %x\n", t, type);
 
         last_token = token;
-        token = make_token(NULL);
+        token = token_create(NULL);
         token->token = (char*)malloc(s - t);
+        token->type = type;
         memcpy(token->token, t, s - t);
         token->left = last_token;
         if(last_token != NULL) last_token->right = token;
@@ -81,20 +101,8 @@ TOKEN* get_tokens(FILE* in)
 
     // (type == NULL) ==> search for a matching lexical rule in dictionary
     if(type == TOKEN_NULL) {
-      for(i = 0; DICTIONARY[i].type != TOKEN_NULL; i++) {
-
-        __info("-> [%ld]%c == [%d]%c\n", s - t, c, i, DICTIONARY[i].string != NULL ? DICTIONARY[i].string[s - t] : 'f');
-
-        // (c in dic.string or dic.function(c) == true) ==> type = dic.type
-        if((DICTIONARY[i].string != NULL && c == DICTIONARY[i].string[s - t])
-           || (DICTIONARY[i].function != NULL && DICTIONARY[i].function(t) != 0)) {
-
-          __info("found %c == %c : %x\n", c, DICTIONARY[i].string != NULL ? DICTIONARY[i].string[s - t] : 'f', DICTIONARY[i].type);
-
-          type = DICTIONARY[i].type;
-          break;
-        }
-      }
+      r = match_rule(t, s);
+      type = DICTIONARY[r].type != TOKEN_NULL ? DICTIONARY[r].type : type;
     }
 
     // ends reading when eof or \n
@@ -104,9 +112,38 @@ TOKEN* get_tokens(FILE* in)
     // character read into the token string ==> next!
     s++;
   }
+
+  if(type == TOKEN_NULL && !feof(in)) {
+    __error(RED "ERROR:" RESET " Unknown token \"%s\"\n", t);
+    return NULL;
+  }
   __info("'%s' : %x\n", t, type);
 
   free(t);
 
   return first_token;
+}
+
+unsigned char match_rule(const char* t, const char* s)
+{
+  unsigned char r;
+  const unsigned long length = s - t;
+
+  for(r = 0; DICTIONARY[r].type != TOKEN_NULL; r++) {
+    // (token length >= dictionary string length) ==> next rule
+    if(DICTIONARY[r].string != NULL && length >= strlen(DICTIONARY[r].string))
+      continue;
+
+    __info("match [%ld]'%c' against [%d]'%c'\n", length, *s, r, DICTIONARY[r].string != NULL ? DICTIONARY[r].string[length] : 'f');
+
+    // (t in dict.string or dict.function(t) == true) ==> type = dict.type
+    if((DICTIONARY[r].string != NULL && strcmp(t, DICTIONARY[r].string) == 0)
+       || (DICTIONARY[r].function != NULL && DICTIONARY[r].function(t) != 0))
+    {
+      __info("found %c == %c : %x\n", *s, DICTIONARY[r].string != NULL ? DICTIONARY[r].string[length] : 'f', DICTIONARY[r].type);
+      break;
+    }
+  }
+
+  return r;
 }
