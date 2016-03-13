@@ -1,2 +1,2 @@
-# simple-math-parser
-> Simple yet extensible Math Expressions Parser written in ANSI-C as a base for a multipurpose programming language compiler
+# dynamic-parser
+> Simple yet extensible dynamic parser written in ANSI-C
