@@ -6,8 +6,9 @@ INCLUDES = -I./
 
 SRC = $(wildcard *.c)
 OBJ = $(addprefix obj/,$(notdir $(SRC:.c=.o)))
+OBJD = $(addprefix obj/,$(notdir $(SRC:.c=.debug.o)))
 
-NAME = interpreter
+NAME = bin/interpreter
 
 #
 # Dependencies
@@ -20,8 +21,13 @@ clean:
 
 obj/%.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $< $(INCLUDES)
+obj/%.debug.o: %.c
+	$(CC) -c $(CFLAGS) -DDEBUG -o $@ $< $(INCLUDES)
 
 build: $(OBJ)
 	$(CC) $(CFLAGS) -o $(NAME) $(OBJ) $(LIBS)
+
+debug: $(OBJD)
+	$(CC) $(CFLAGS) -o $(NAME) $(OBJD) $(LIBS)
 
 .PHONY: clean
