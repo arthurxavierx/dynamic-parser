@@ -9,6 +9,7 @@
  */
 #define TOKEN_TYPE unsigned int
 
+
 #define TOKEN_NULL    0x000000u  // 0000 0000 0000 0000 0000 0000
 #define TOKEN_ANY     0xFFFFFFu  // 1111 1111 1111 1111 1111 1111
 #define TOKEN_NEWLINE 0xFFFFFEu  // 1111 1111 1111 1111 1111 1110
@@ -33,7 +34,7 @@ typedef struct TOKEN {
 
 typedef struct LEXICAL_RULE {
   const char* string;
-  int (*function)(const char*);
+  int (*function)(const char*, const char*);
   TOKEN_TYPE type;
 } LEXICAL_RULE;
 

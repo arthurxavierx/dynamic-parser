@@ -37,6 +37,17 @@ void token_destroy(TOKEN* t)
   free(t);
 }
 
+int lexical_rule_compare(const LEXICAL_RULE* rule, const char* t)
+{
+  return rule->function != NULL && rule->function(t, rule->string) != 0;
+}
+
+/**
+ * Given n is the length of the input stream of characters
+ * and m is the size of the dictionary, and considering the comparison functions
+ * of the dictionary to be sufficiently small as O(1) (given that the lexemes in the dictionary are not large enough),
+ * this tokenization algorithm has then a complexity of order O(nm).
+ */
 TOKEN* tokenize(const LEXICAL_RULE* dictionary, FILE* in)
 {
   unsigned char r = 0; /**< index of current dictionary rule */
@@ -66,10 +77,8 @@ TOKEN* tokenize(const LEXICAL_RULE* dictionary, FILE* in)
 
     // (type != NULL)? ==> check if the character read has the same token type
     if(type != TOKEN_NULL) {
-      // (token type of c != type)? ==> instantiate read token and starting reading a new one
-      if(!(dictionary[r].string != NULL && c == dictionary[r].string[s - t])
-         && !(dictionary[r].function != NULL && dictionary[r].function(t) != 0))
-      {
+      // (token type of t != type)? ==> instantiate read token and starting reading a new one
+      if(!lexical_rule_compare(&dictionary[r], t)) {
         // terminates current token string
         *s = 0;
         __info("'%s' : %x\n", t, type);
@@ -91,10 +100,14 @@ TOKEN* tokenize(const LEXICAL_RULE* dictionary, FILE* in)
       }
     }
 
-    // (type == NULL) ==> search for a matching lexical rule in dictionary
+    // (type == NULL)? ==> search for a matching lexical rule in dictionary
     if(type == TOKEN_NULL) {
-      r = match_rule(dictionary, t, s);
-      type = dictionary[r].type != TOKEN_NULL ? dictionary[r].type : type;
+      for(r = 0; dictionary[r].type != TOKEN_NULL; r++) {
+        if(lexical_rule_compare(&dictionary[r], t)) {
+          type = dictionary[r].type;
+          break;
+        }
+      }
     }
 
     // ends reading when eof or \n
@@ -114,28 +127,4 @@ TOKEN* tokenize(const LEXICAL_RULE* dictionary, FILE* in)
   free(t);
 
   return first_token;
-}
-
-unsigned char match_rule(const LEXICAL_RULE* dictionary, const char* t, const char* s)
-{
-  unsigned char r;
-  const unsigned long length = s - t;
-
-  for(r = 0; dictionary[r].type != TOKEN_NULL; r++) {
-    // (token length >= dictionary string length) ==> next rule
-    if(dictionary[r].string != NULL && length >= strlen(dictionary[r].string))
-      continue;
-
-    __info("match [%ld]'%c' against [%d]'%c'\n", length, *s, r, dictionary[r].string != NULL ? dictionary[r].string[length] : 'f');
-
-    // (t in dict.string or dict.function(t) == true) ==> type = dict.type
-    if((dictionary[r].string != NULL && strcmp(t, dictionary[r].string) == 0)
-       || (dictionary[r].function != NULL && dictionary[r].function(t) != 0))
-    {
-      __info("found %c == %c : %x\n", *s, dictionary[r].string != NULL ? dictionary[r].string[length] : 'f', dictionary[r].type);
-      break;
-    }
-  }
-
-  return r;
 }
