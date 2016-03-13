@@ -5,25 +5,17 @@
 #include "lexer.h"
 
 /**
- * Find a specific lexical rule in the dictionary which matches the specified token.
+ * Find a specific lexical rule in the supplied dictionary which matches the specified token.
+ * @param dictionary list of lexical rules
  * @param t pointer to the start of the token string
  * @param s pointer to the end (current character) of the token string
  * @return Index of the matched lexical rule
  */
-unsigned char match_rule(const char*, const char*);
+unsigned char match_rule(const LEXICAL_RULE* dictionary, const char*, const char*);
 
 int istype(unsigned int t1, unsigned int t2)
 {
   return !((t1 & t2) == t1);
-}
-
-int isnumberstr(const char* s)
-{
-  if(s == NULL || *s == '\0' || isspace(*s))
-    return 0;
-  char* p;
-  strtod(s, &p);
-  return *p == '\0';
 }
 
 TOKEN* token_create(char* s)
@@ -45,7 +37,7 @@ void token_destroy(TOKEN* t)
   free(t);
 }
 
-TOKEN* tokenize(FILE* in)
+TOKEN* tokenize(const LEXICAL_RULE* dictionary, FILE* in)
 {
   unsigned char r = 0; /**< index of current dictionary rule */
 
@@ -75,8 +67,8 @@ TOKEN* tokenize(FILE* in)
     // (type != NULL)? ==> check if the character read has the same token type
     if(type != TOKEN_NULL) {
       // (token type of c != type)? ==> instantiate read token and starting reading a new one
-      if(!(DICTIONARY[r].string != NULL && c == DICTIONARY[r].string[s - t])
-         && !(DICTIONARY[r].function != NULL && DICTIONARY[r].function(t) != 0))
+      if(!(dictionary[r].string != NULL && c == dictionary[r].string[s - t])
+         && !(dictionary[r].function != NULL && dictionary[r].function(t) != 0))
       {
         // terminates current token string
         *s = 0;
@@ -101,8 +93,8 @@ TOKEN* tokenize(FILE* in)
 
     // (type == NULL) ==> search for a matching lexical rule in dictionary
     if(type == TOKEN_NULL) {
-      r = match_rule(t, s);
-      type = DICTIONARY[r].type != TOKEN_NULL ? DICTIONARY[r].type : type;
+      r = match_rule(dictionary, t, s);
+      type = dictionary[r].type != TOKEN_NULL ? dictionary[r].type : type;
     }
 
     // ends reading when eof or \n
@@ -124,23 +116,23 @@ TOKEN* tokenize(FILE* in)
   return first_token;
 }
 
-unsigned char match_rule(const char* t, const char* s)
+unsigned char match_rule(const LEXICAL_RULE* dictionary, const char* t, const char* s)
 {
   unsigned char r;
   const unsigned long length = s - t;
 
-  for(r = 0; DICTIONARY[r].type != TOKEN_NULL; r++) {
+  for(r = 0; dictionary[r].type != TOKEN_NULL; r++) {
     // (token length >= dictionary string length) ==> next rule
-    if(DICTIONARY[r].string != NULL && length >= strlen(DICTIONARY[r].string))
+    if(dictionary[r].string != NULL && length >= strlen(dictionary[r].string))
       continue;
 
-    __info("match [%ld]'%c' against [%d]'%c'\n", length, *s, r, DICTIONARY[r].string != NULL ? DICTIONARY[r].string[length] : 'f');
+    __info("match [%ld]'%c' against [%d]'%c'\n", length, *s, r, dictionary[r].string != NULL ? dictionary[r].string[length] : 'f');
 
     // (t in dict.string or dict.function(t) == true) ==> type = dict.type
-    if((DICTIONARY[r].string != NULL && strcmp(t, DICTIONARY[r].string) == 0)
-       || (DICTIONARY[r].function != NULL && DICTIONARY[r].function(t) != 0))
+    if((dictionary[r].string != NULL && strcmp(t, dictionary[r].string) == 0)
+       || (dictionary[r].function != NULL && dictionary[r].function(t) != 0))
     {
-      __info("found %c == %c : %x\n", *s, DICTIONARY[r].string != NULL ? DICTIONARY[r].string[length] : 'f', DICTIONARY[r].type);
+      __info("found %c == %c : %x\n", *s, dictionary[r].string != NULL ? dictionary[r].string[length] : 'f', dictionary[r].type);
       break;
     }
   }
