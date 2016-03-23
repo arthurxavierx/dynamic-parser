@@ -5,13 +5,14 @@
 #include "utils.h"
 #include "lexer.h"
 
-int strequal(const char* a, const char* b);
-int isnumberstr(const char* s, const char*);
+int _strcmp(const char* a, const char* b);
+int _isnumber(const char* s, const char*);
 
 // expression
 #define TOKEN_EXPRESSION    0x000100u  // 0000 0000 0000 0001 0000 0000
 #define TOKEN_OPERATOR_ADD  0x000101u  // 0000 0000 0000 0001 0000 0001
 #define TOKEN_OPERATOR_SUB  0x000102u  // 0000 0000 0000 0001 0000 0010
+#define TOKEN_FUNCTION      0x000104u
 
 // term
 #define TOKEN_TERM         0x001000u  // 0000 0000 0001 0000 0000 0000
@@ -22,12 +23,12 @@ int isnumberstr(const char* s, const char*);
 #define TOKEN_END          0x000020u  // 0000 0000 0000 0000 0010 0000
 
 const LEXICAL_RULE DICTIONARY[] = {
-  { "\n", strequal,    TOKEN_NEWLINE },
-  { NULL, isnumberstr, TOKEN_NUMBER },
-  { "+",  strequal,    TOKEN_OPERATOR_ADD },
-  { "-",  strequal,    TOKEN_OPERATOR_SUB },
-  { "(",  strequal,    TOKEN_PARENTHESIS | TOKEN_BEGIN },
-  { ")",  strequal,    TOKEN_PARENTHESIS | TOKEN_END },
+  { "\n", _strcmp,    TOKEN_NEWLINE },
+  { NULL, _isnumber,  TOKEN_NUMBER },
+  { "+",  _strcmp,    TOKEN_OPERATOR_ADD },
+  { "-",  _strcmp,    TOKEN_OPERATOR_SUB },
+  { "(",  _strcmp,    TOKEN_PARENTHESIS | TOKEN_BEGIN },
+  { ")",  _strcmp,    TOKEN_PARENTHESIS | TOKEN_END },
   { NULL, NULL, TOKEN_NULL }
 };
 
@@ -36,15 +37,11 @@ const LEXICAL_RULE DICTIONARY[] = {
  */
 int main()
 {
-  TOKEN* t;
+  TOKEN token;
 
-  while(!feof(stdin))
-  {
-    for(t = tokenize(DICTIONARY, stdin); t != NULL; t = t->right) {
-      printf("\"%s\":%x ", t->token, t->type);
-      token_destroy(t);
-    }
-    printf("\n");
+  while(!feof(stdin)) {
+    token = get_token(DICTIONARY, stdin);
+    printf("\"%s\":%x\n", token.token, token.type);
   }
 
   return 0;
@@ -54,7 +51,8 @@ int main()
  * Check if both strings are equal.
  * @return true if both strings are equal, otherwise false
  */
-int strequal(const char* a, const char* b) {
+int _strcmp(const char* a, const char* b)
+{
   return strcmp(a, b) == 0;
 }
 
@@ -63,7 +61,7 @@ int strequal(const char* a, const char* b) {
  * @param s string to check
  * @return true if s is a number-like string, otherwise false
  */
-int isnumberstr(const char* s, const char* _)
+int _isnumber(const char* s, const char* _)
 {
   if(s == NULL || *s == '\0' || isspace(*s))
     return 0;

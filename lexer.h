@@ -32,6 +32,8 @@ typedef struct TOKEN {
   struct TOKEN *left, *right;
 } TOKEN;
 
+static const TOKEN TOKEN_EMPTY;
+
 typedef struct LEXICAL_RULE {
   const char* string;
   int (*function)(const char*, const char*);
@@ -52,10 +54,11 @@ TOKEN* token_create(char* s);
 void token_destroy(TOKEN* t);
 
 /**
- * Generate a token linked list out of an input stream of characters.
+ * Get the next token out of the input stream
+ * @param dictionary LEXICAL_RULE array to be used as a token lexic
  * @param in input stream of characters
- * @return The first token of the generated token list
+ * @return The first separate token identified
  */
-TOKEN* tokenize(const LEXICAL_RULE* dictionary, FILE* in);
+TOKEN get_token(const LEXICAL_RULE* dictionary, FILE* in);
 
 #endif
